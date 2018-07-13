@@ -24,11 +24,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <batteryservice/BatteryService.h>
 #include <binder/IPCThreadState.h>
 #include <binder/ProcessState.h>
 #include <cutils/klog.h>
 #include <cutils/uevent.h>
+#include <cutils/properties.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 
@@ -55,10 +57,12 @@ static struct healthd_config healthd_config = {
 #define POWER_SUPPLY_SUBSYSTEM "power_supply"
 
 // epoll events: uevent, wakealarm, binder
-#define MAX_EPOLL_EVENTS 3
+#define MAX_EPOLL_EVENTS 4
 static int uevent_fd;
 static int wakealarm_fd;
 static int binder_fd;
+static int rtc_wakealarm_fd;
+static int rtc_wakealarm_interval;
 
 // -1 for no epoll timeout
 static int awake_poll_interval = -1;
@@ -87,6 +91,24 @@ static void wakealarm_set_interval(int interval) {
 
     if (timerfd_settime(wakealarm_fd, 0, &itval, NULL) == -1)
         KLOG_ERROR(LOG_TAG, "wakealarm_set_interval: timerfd_settime failed\n");
+}
+
+static void rtc_wakealarm_set_interval(int interval) {
+    struct itimerspec itval;
+
+    if (rtc_wakealarm_fd == -1)
+            return;
+
+    if (interval == -1)
+        interval = 0;
+
+    itval.it_interval.tv_sec = interval;
+    itval.it_interval.tv_nsec = 0;
+    itval.it_value.tv_sec = interval;
+    itval.it_value.tv_nsec = 0;
+
+    if (timerfd_settime(rtc_wakealarm_fd, 0, &itval, NULL) == -1)
+        KLOG_ERROR(LOG_TAG, "rtc_wakealarm_set_interval: timerfd_settime failed\n");
 }
 
 static void battery_update(void) {
@@ -175,6 +197,59 @@ static void wakealarm_event(void) {
     periodic_chores();
 }
 
+static void hw_wakealarm_set_interval(int interval) {
+    int fd = open("/sys/class/rtc/rtc0/wakealarm", O_RDWR);
+    if (fd == -1) {
+        KLOG_ERROR(LOG_TAG, "hw_wakealarm_set_interval: open failed\n");
+        return;
+    }
+
+    char buf[32] = {'\0', };
+    read(fd, buf, 32);
+
+    if (strlen(buf) != 0) {
+        KLOG_ERROR(LOG_TAG, "already set wake alarm\n");
+        close(fd);
+        return;
+    }
+
+    sprintf(buf, "+%d", interval);
+
+    write(fd, buf, strlen(buf));
+    close(fd);
+}
+
+static void rtc_wakealarm_init(void) {
+    char value[PROPERTY_VALUE_MAX];
+    property_get("ro.wakealarm.minute", value, "0");
+    rtc_wakealarm_interval = atoi(value) * 60;
+
+    if (rtc_wakealarm_interval == 0) {
+        rtc_wakealarm_fd = -1;
+        return;
+    }
+
+    rtc_wakealarm_fd = timerfd_create(CLOCK_BOOTTIME_ALARM, TFD_NONBLOCK);
+    if (rtc_wakealarm_fd == -1) {
+        KLOG_ERROR(LOG_TAG, "rtc_wakealarm_init: timerfd_create failed\n");
+        return;
+    }
+
+    rtc_wakealarm_set_interval(rtc_wakealarm_interval);
+    hw_wakealarm_set_interval(rtc_wakealarm_interval);
+}
+
+static void rtc_wakealarm_event(void) {
+    unsigned long long wakeups;
+
+    if (read(rtc_wakealarm_fd, &wakeups, sizeof(wakeups)) == -1) {
+        KLOG_ERROR(LOG_TAG, "rtc_wakealarm_event: read wakealarm_fd failed\n");
+        return;
+    }
+
+    hw_wakealarm_set_interval(rtc_wakealarm_interval);
+}
+
 static void binder_init(void) {
     ProcessState::self()->setThreadPoolMaxThreadCount(0);
     IPCThreadState::self()->disableBackgroundScheduling(true);
@@ -231,6 +306,17 @@ static void healthd_mainloop(void) {
             maxevents++;
    }
 
+    if (rtc_wakealarm_fd >= 0) {
+        ev.events = EPOLLIN | EPOLLWAKEUP;
+        ev.data.ptr = (void *)rtc_wakealarm_event;
+        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, rtc_wakealarm_fd, &ev) == -1)
+            KLOG_ERROR(LOG_TAG,
+                       "healthd_mainloop: epoll_ctl for rtc_wakealarm_fd failed; errno=%d\n",
+                       errno);
+        else
+            maxevents++;
+    }
+
     while (1) {
         struct epoll_event events[maxevents];
         int nevents;
@@ -274,6 +360,7 @@ int main(int argc, char **argv) {
     }
 
     healthd_board_init(&healthd_config);
+    rtc_wakealarm_init();
     wakealarm_init();
     uevent_init();
     binder_init();
