@@ -113,6 +113,8 @@ static std::thread property_service_thread;
 
 static PropertyInfoAreaFile property_info_area;
 
+char serialno[32] = {'\0',};
+
 struct PropertyAuditData {
     const ucred* cr;
     const char* name;
@@ -1216,6 +1218,18 @@ void CreateSerializedPropertyInfo() {
     selinux_android_restorecon(kPropertyInfosPath, 0);
 }
 
+static void setSerialNo() {
+	char buf[64];
+
+    FILE *file = fopen("/sys/class/efuse/uuid", "r");
+    if (file) {
+        fread(buf, 1, sizeof(buf), file);
+    }
+    strncpy(serialno, buf + 24, 12);
+
+    fclose(file);
+}
+
 static void ExportKernelBootProps() {
     constexpr const char* UNSET = "";
     struct {
@@ -1224,7 +1238,7 @@ static void ExportKernelBootProps() {
         const char* default_value;
     } prop_map[] = {
             // clang-format off
-        { "ro.boot.serialno",   "ro.serialno",   UNSET, },
+        { "ro.boot.serialno",   "ro.serialno",   serialno, },
         { "ro.boot.mode",       "ro.bootmode",   "unknown", },
         { "ro.boot.baseband",   "ro.baseband",   "unknown", },
         { "ro.boot.bootloader", "ro.bootloader", "unknown", },
@@ -1303,6 +1317,7 @@ void PropertyInit() {
     ProcessKernelCmdline();
     ProcessBootconfig();
 
+    setSerialNo();
     // Propagate the kernel variables to internal variables
     // used by init as well as the current required properties.
     ExportKernelBootProps();
