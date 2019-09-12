@@ -23,7 +23,7 @@ cc_library_shared {
 }
 
 cc_binary {
-    name: "dhcpdbg",
+    name: "dhcptool",
 
     srcs: [
         "dhcptool.c",
