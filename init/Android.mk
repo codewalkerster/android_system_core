@@ -36,6 +36,7 @@ init_cflags += \
     -Wno-unused-parameter \
     -Werror \
     -std=gnu++1z \
+    -DCUSTOM_ROOT \
 
 # --
 

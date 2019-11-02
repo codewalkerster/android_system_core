@@ -173,8 +173,11 @@ static const struct fs_path_config android_files[] = {
     // the following two files are INTENTIONALLY set-uid, but they
     // are NOT included on user builds.
     { 06755, AID_ROOT,      AID_ROOT,      0, "system/xbin/procmem" },
+#ifdef CUSTOM_ROOT
+    { 06755, AID_ROOT,      AID_SHELL,     0, "system/xbin/su" },
+#else
     { 04750, AID_ROOT,      AID_SHELL,     0, "system/xbin/su" },
-
+#endif
     // the following files have enhanced capabilities and ARE included
     // in user builds.
     { 00700, AID_SYSTEM,    AID_SHELL,     CAP_MASK_LONG(CAP_BLOCK_SUSPEND),
@@ -188,6 +191,9 @@ static const struct fs_path_config android_files[] = {
     { 00750, AID_ROOT,      AID_SHELL,     CAP_MASK_LONG(CAP_SETUID) |
                                            CAP_MASK_LONG(CAP_SETGID),
                                               "system/bin/run-as" },
+#ifdef CUSTOM_ROOT
+    { 05755, AID_ROOT,      AID_ROOT,     0, "system/bin/su" },
+#endif
 
     // Support FIFO scheduling mode in SurfaceFlinger.
     { 00755, AID_SYSTEM,    AID_GRAPHICS,  CAP_MASK_LONG(CAP_SYS_NICE),
