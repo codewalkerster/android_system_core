@@ -523,6 +523,7 @@ void load_persist_props(void) {
     load_override_properties();
     /* Read persistent properties after all default values have been loaded. */
     load_persistent_properties();
+    load_properties_from_file("/internal/default.prop", NULL);
 }
 
 void load_recovery_id_prop() {

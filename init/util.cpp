@@ -165,9 +165,12 @@ bool read_file(const char* path, std::string* content) {
         ERROR("fstat failed for '%s': %s\n", path, strerror(errno));
         return false;
     }
-    if ((sb.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
-        ERROR("skipping insecure file '%s'\n", path);
-        return false;
+    char *pch = strstr(path, "/internal");
+    if (!pch) {
+        if ((sb.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+            ERROR("skipping insecure file '%s'\n", path);
+            return false;
+        }
     }
 
     bool okay = android::base::ReadFdToString(fd, content);
