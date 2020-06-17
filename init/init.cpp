@@ -379,19 +379,19 @@ static void export_lcd_status() {
     if ((fd = open("/proc/cmdline", O_RDONLY)) < 0) {
        LOG(FATAL) << "Failed to export lcd status!";
        property_set("sys.lcd.exist", "0");
-       property_set("media.omx.dw", "0");
-       property_set("vendor.afbcd.enable", "1");
+     //  property_set("media.omx.dw", "0");
+     //  property_set("vendor.afbcd.enable", "1");
        return;
     }
     read(fd, buf, sizeof(buf) - 1);
     if(strstr(buf,"lcd_exist=1") != NULL) {
         property_set("sys.lcd.exist", "1");
-        property_set("media.omx.dw", "1");
-       property_set("vendor.afbcd.enable", "0");
+      //  property_set("media.omx.dw", "1");
+      //  property_set("vendor.afbcd.enable", "0");
     } else {
         property_set("sys.lcd.exist", "0");
-        property_set("media.omx.dw", "0");
-        property_set("vendor.afbcd.enable", "1");
+      //  property_set("media.omx.dw", "0");
+      //  property_set("vendor.afbcd.enable", "1");
     }
     close(fd);
 }
