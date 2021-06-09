@@ -669,10 +669,12 @@ int main(int argc, char** argv) {
     FILE *file = fopen("/sys/class/efuse/uuid", "r");
     if (file) {
         fread(buf, 1, sizeof(buf), file);
+        strncpy(serialno, buf + 24, 12);
+        fclose(file);
+    } else {
+        LOG(INFO) << "/sys/class/efuse/uuid open failed";
+        strncpy(serialno, "000000000000", 12);
     }
-    strncpy(serialno, buf + 24, 12);
-
-    fclose(file);
 
     // Propagate the kernel variables to internal variables
     // used by init as well as the current required properties.
