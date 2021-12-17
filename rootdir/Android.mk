@@ -104,10 +104,9 @@ ifdef BOARD_USES_METADATA_PARTITION
 endif
 
 
-# For /odm, /fat & /dtb  partitions.
+# For /odm, /fat partitions.
 LOCAL_POST_INSTALL_CMD += ; mkdir -p $(TARGET_ROOT_OUT)/odm
 LOCAL_POST_INSTALL_CMD += ; mkdir -p $(TARGET_ROOT_OUT)/fat
-LOCAL_POST_INSTALL_CMD += ; mkdir -p $(TARGET_ROOT_OUT)/dtb
 # For Treble Generic System Image (GSI), system-as-root GSI needs to work on
 # both devices with and without /odm partition. Those symlinks are for devices
 # without /odm partition. For devices with /odm partition, mount odm.img under
