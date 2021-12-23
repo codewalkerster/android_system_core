@@ -1006,6 +1006,7 @@ static void ExportKernelBootProps() {
         { "ro.boot.baseband",   "ro.baseband",   "unknown", },
         { "ro.boot.bootloader", "ro.bootloader", "unknown", },
         { "ro.boot.hardware",   "ro.hardware",   "unknown", },
+        { "ro.boot.lcd_density","ro.sf.lcd_density", UNSET, },
         { "ro.boot.revision",   "ro.revision",   "0", },
             // clang-format on
     };
