@@ -996,16 +996,25 @@ void CreateSerializedPropertyInfo() {
 }
 
 static void setSerialNo() {
-	char buf[64];
+    char buf[64];
 
     //ODROID-M1
     FILE *file = fopen("/sys/class/efuse/uuid", "r");
     if (file) {
         fread(buf, 1, sizeof(buf), file);
-        strncpy(serialno, buf + 24, 12);
+        LOG(ERROR) << "/sys/class/efuse/uuid " << buf;
+        if (strlen(buf) != 0) {
+            strncpy(serialno, buf + 24, 12);
+        }
         fclose(file);
+    }
+
+    if (strlen(serialno) != 0) {
+        LOG(ERROR) << "This board is ODROID-M1";
+        return;
     } else {
-    //ODROID-M1S
+        //ODROID-M1S
+        LOG(ERROR) << "This board is ODROID-M1S";
         std::string cmdline;
         if (ReadFileToString("/proc/cmdline", &cmdline)) {
             std::vector <std::string> tokens;
