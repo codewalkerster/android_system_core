@@ -1004,22 +1004,22 @@ static void setSerialNo() {
         fread(buf, 1, sizeof(buf), file);
         strncpy(serialno, buf + 24, 12);
         fclose(file);
-    }
-
+    } else {
     //ODROID-M1S
-    std::string cmdline;
-    if (ReadFileToString("/proc/cmdline", &cmdline)) {
-        std::vector <std::string> tokens;
-        std::stringstream check(cmdline);
-        std::string intermediate;
-        while(getline(check, intermediate, ' ')) {
-            tokens.push_back(intermediate);
-        }
-        for (auto iter = tokens.begin(); iter != tokens.end(); iter++) {
-            std::string arg = *iter;
-            if (arg.rfind("vendor.serialno=", 0) == 0) {
-                strncpy(serialno, arg.c_str() + 41, 12);
-                break;
+        std::string cmdline;
+        if (ReadFileToString("/proc/cmdline", &cmdline)) {
+            std::vector <std::string> tokens;
+            std::stringstream check(cmdline);
+            std::string intermediate;
+            while(getline(check, intermediate, ' ')) {
+                tokens.push_back(intermediate);
+            }
+            for (auto iter = tokens.begin(); iter != tokens.end(); iter++) {
+                std::string arg = *iter;
+                if (arg.rfind("vendor.serialno=", 0) == 0) {
+                    strncpy(serialno, arg.c_str() + 41, 12);
+                    break;
+                }
             }
         }
     }
