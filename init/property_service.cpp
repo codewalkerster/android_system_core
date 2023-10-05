@@ -1026,7 +1026,7 @@ static void setSerialNo() {
             for (auto iter = tokens.begin(); iter != tokens.end(); iter++) {
                 std::string arg = *iter;
                 if (arg.rfind("vendor.serialno=", 0) == 0) {
-                    strncpy(serialno, arg.c_str() + 41, 12);
+                    strncpy(serialno, arg.c_str() + 40, 12);
                     break;
                 }
             }
