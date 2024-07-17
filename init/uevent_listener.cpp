@@ -185,7 +185,7 @@ void UeventListener::RegenerateUevents(const ListenerCallback& callback) const {
         if (RegenerateUeventsForPath(path, callback) == ListenerAction::kStop) return;
     }
 }
-
+#ifndef DISABLE_PARALLEL
 class ThreadPool {
 public:
     ThreadPool(size_t numThreads) : stop(false) {
@@ -245,7 +245,7 @@ private:
     std::condition_variable condition;
     bool stop;
 };
-
+#endif
 void UeventListener::Poll(const ListenerCallback& callback,
                           const std::optional<std::chrono::milliseconds> relative_timeout) const {
     using namespace std::chrono;
@@ -256,8 +256,9 @@ void UeventListener::Poll(const ListenerCallback& callback,
     };
 
     auto start_time = steady_clock::now();
-
+#ifndef DISABLE_PARALLEL
     ThreadPool pool(std::thread::hardware_concurrency() ?: 4);
+#endif
     while (true) {
         ufd.revents = 0;
 
@@ -280,6 +281,7 @@ void UeventListener::Poll(const ListenerCallback& callback,
         if (ufd.revents & POLLIN) {
             // We're non-blocking, so if we receive a poll event keep processing until
             // we have exhausted all uevent messages.
+#ifndef DISABLE_PARALLEL
             auto task = [&](){
                 Uevent uevent;
                 ReadUeventResult result;
@@ -290,6 +292,15 @@ void UeventListener::Poll(const ListenerCallback& callback,
                 }
             };
             pool.enqueue(task);
+#else
+	    Uevent uevent;
+            ReadUeventResult result;
+            while ((result = ReadUevent(&uevent)) != ReadUeventResult::kFailed) {
+                // Skip processing the uevent if it is invalid.
+                if (result == ReadUeventResult::kInvalid) continue;
+                if (callback(uevent) == ListenerAction::kStop) return;
+            }
+#endif
         }
     }
 }
