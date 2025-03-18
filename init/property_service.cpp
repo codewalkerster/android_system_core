@@ -122,6 +122,8 @@ static std::unique_ptr<PersistWriteThread> persist_write_thread;
 
 static PropertyInfoAreaFile property_info_area;
 
+char serialno[32] = {'\0',};
+
 struct PropertyAuditData {
     const ucred* cr;
     const char* name;
@@ -1290,6 +1292,27 @@ void CreateSerializedPropertyInfo() {
     selinux_android_restorecon(kPropertyInfosPath, 0);
 }
 
+static void setSerialNo() {
+    LOG(ERROR) << "Read serial# from bootargs";
+    std::string cmdline;
+    if (ReadFileToString("/proc/cmdline", &cmdline)) {
+        std::vector <std::string> tokens;
+        std::stringstream check(cmdline);
+        std::string intermediate;
+
+        while(getline(check, intermediate, ' ')) {
+            tokens.push_back(intermediate);
+        }
+        for (auto iter = tokens.begin(); iter != tokens.end(); iter++) {
+            std::string arg = *iter;
+            if (arg.rfind("vendor.serialno=", 0) == 0) {
+                strncpy(serialno, arg.c_str() + 40, 12);
+                break;
+            }
+        }
+    }
+}
+
 static void ExportKernelBootProps() {
     constexpr const char* UNSET = "";
     struct {
@@ -1298,7 +1321,7 @@ static void ExportKernelBootProps() {
         const char* default_value;
     } prop_map[] = {
             // clang-format off
-        { "ro.boot.serialno",   "ro.serialno",   UNSET, },
+        { "ro.boot.serialno",   "ro.serialno",   serialno, },
         { "ro.boot.mode",       "ro.bootmode",   "unknown", },
         { "ro.boot.baseband",   "ro.baseband",   "unknown", },
         { "ro.boot.bootloader", "ro.bootloader", "unknown", },
@@ -1376,6 +1399,7 @@ void PropertyInit() {
     ProcessKernelCmdline();
     ProcessBootconfig();
 
+    setSerialNo();
     // Propagate the kernel variables to internal variables
     // used by init as well as the current required properties.
     ExportKernelBootProps();
