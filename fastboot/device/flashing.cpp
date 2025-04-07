@@ -143,7 +143,11 @@ int FlashSparseData(PartitionHandle* handle, std::vector<char>& downloaded_data)
 }
 
 int FlashBlockDevice(PartitionHandle* handle, std::vector<char>& downloaded_data) {
-    lseek64(handle->fd(), 0, SEEK_SET);
+    if (handle->path().find(MMC_HIDDEN_PART) != std::string::npos) {
+        lseek64(handle->fd(), LBA, SEEK_SET);
+    } else {
+        lseek64(handle->fd(), 0, SEEK_SET);
+    }
     if (downloaded_data.size() >= sizeof(SPARSE_HEADER_MAGIC) &&
         *reinterpret_cast<uint32_t*>(downloaded_data.data()) == SPARSE_HEADER_MAGIC) {
         return FlashSparseData(handle, downloaded_data);

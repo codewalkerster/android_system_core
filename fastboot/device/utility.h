@@ -130,3 +130,7 @@ bool GetDeviceLockStatus();
 // Update all copies of metadata.
 bool UpdateAllPartitionMetadata(FastbootDevice* device, const std::string& super_name,
                                 const android::fs_mgr::LpMetadata& metadata);
+
+constexpr const char* MMC_HIDDEN_PART = "mmcblk0boot";
+constexpr unsigned int LBA = 512;
+bool HiddenBootWrite(const std::string& name, bool rw);

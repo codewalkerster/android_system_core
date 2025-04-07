@@ -213,6 +213,26 @@ bool UpdateAllPartitionMetadata(FastbootDevice* device, const std::string& super
     return ok;
 }
 
+bool HiddenBootWrite(const std::string& name, bool rw) {
+    const auto& force_ro_path = "/sys/block/" + name + "/force_ro";
+    auto force_ro = open (force_ro_path.c_str(), O_WRONLY);
+
+    if (force_ro < 0) {
+        LOG(ERROR) << "Could not access " << force_ro_path;
+        return false;
+    }
+
+    auto ret = write(force_ro, rw? "0": "1", 1);
+    close(force_ro);
+
+    if (ret < 0) {
+        LOG(ERROR) << "Could not change permission of" << name;
+        return false;
+    }
+
+    return true;
+}
+
 std::string GetSuperSlotSuffix(FastbootDevice* device, const std::string& partition_name) {
     // If the super partition does not have a slot suffix, this is not a
     // retrofit device, and we should take the current slot.

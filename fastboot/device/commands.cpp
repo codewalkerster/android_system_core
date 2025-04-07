@@ -605,7 +605,14 @@ bool FlashHandler(FastbootDevice* device, const std::vector<std::string>& args) 
                                    "Flashing is not allowed on locked devices");
     }
 
-    const auto& partition_name = args[1];
+    std::string& temp_part_name = const_cast<std::string&>(args[1]);
+
+    if (temp_part_name.rfind("bootloader-boot", 0) == 0) {
+        temp_part_name = std::string(MMC_HIDDEN_PART)
+            + args[1].substr(args[1].length()-1);
+    }
+
+    const auto& partition_name = temp_part_name;
     if (IsProtectedPartitionDuringMerge(device, partition_name)) {
         auto message = "Cannot flash " + partition_name + " while a snapshot update is in progress";
         return device->WriteFail(message);
@@ -615,12 +622,20 @@ bool FlashHandler(FastbootDevice* device, const std::vector<std::string>& args) 
         CancelPartitionSnapshot(device, partition_name);
     }
 
+    if (partition_name.rfind(MMC_HIDDEN_PART) == 0) {
+        HiddenBootWrite(partition_name, true);
+    }
+
     int ret = Flash(device, partition_name);
     if (ret < 0) {
         return device->WriteStatus(FastbootResult::FAIL, strerror(-ret));
     }
     if (partition_name == "userdata") {
         PostWipeData();
+    }
+
+    if (partition_name.rfind(MMC_HIDDEN_PART) == 0) {
+        HiddenBootWrite(partition_name, false);
     }
 
     return device->WriteStatus(FastbootResult::OKAY, "Flashing succeeded");
